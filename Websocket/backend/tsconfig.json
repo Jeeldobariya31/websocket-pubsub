@@ -1,0 +1,66 @@
+{
+  // 📘 TypeScript configuration file
+  // Docs: https://aka.ms/tsconfig
+
+  "compilerOptions": {
+    /* ===================== 📁 PROJECT STRUCTURE ===================== */
+
+    // Root directory of TypeScript source files
+    "rootDir": "./src",
+
+    // Output directory for compiled JavaScript files
+    "outDir": "./dist",
+
+    /* ===================== 🌍 RUNTIME ENVIRONMENT ===================== */
+
+    // Use Node.js ES Module system (required for modern Node)
+    "module": "NodeNext",
+
+    // Match Node.js module resolution behavior
+    "moduleResolution": "NodeNext",
+
+    // Target modern JavaScript (Node 18+ recommended)
+    "target": "ESNext",
+
+    // Include Node.js global types (http, process, etc.)
+    "types": ["node"],
+
+    /* ===================== 📤 OUTPUT OPTIONS ===================== */
+
+    // Generate source maps for debugging
+    "sourceMap": true,
+
+    // Generate .d.ts type declaration files
+    "declaration": true,
+
+    // Generate source maps for declaration files
+    "declarationMap": true,
+
+    /* ===================== 🔒 TYPE SAFETY ===================== */
+
+    // Enable all strict type-checking options
+    "strict": true,
+
+    // Do not allow unchecked indexed access
+    "noUncheckedIndexedAccess": true,
+
+    // Enforce exact optional property types
+    "exactOptionalPropertyTypes": true,
+
+    /* ===================== 🧠 MODULE & SYNTAX RULES ===================== */
+
+    // Preserve import/export syntax exactly (important for ESM)
+    "verbatimModuleSyntax": true,
+
+    // Ensure each file can be transpiled independently
+    "isolatedModules": true,
+
+    // Force TypeScript to treat all files as modules
+    "moduleDetection": "force",
+
+    /* ===================== ⚡ PERFORMANCE ===================== */
+
+    // Skip type checking of declaration files
+    "skipLibCheck": true
+  }
+}
