@@ -11,29 +11,38 @@
  * 🔁 Message broadcasting
  * 🌐 Works across LAN / multiple devices
  *
- * FLOW:
- * 1️⃣ Client connects
- * 2️⃣ Client sends "join" with name
- * 3️⃣ Server tracks user
- * 4️⃣ Messages broadcast with name + time
- * 5️⃣ Online users list updated on join/leave
+ * FLOW (HIGH LEVEL):
+ * 1️⃣ Client connects to WebSocket
+ * 2️⃣ Client sends "join" event with name
+ * 3️⃣ Server stores user
+ * 4️⃣ Server broadcasts online users list
+ * 5️⃣ Client sends messages
+ * 6️⃣ Server broadcasts messages with name + time
+ * 7️⃣ On disconnect → user removed → list updated
  *************************************************************/
 
-/* ===================== 📦 IMPORTS ===================== */
+/* ===================== 📦 STEP 1: IMPORT MODULES ===================== */
+/**
+ * http       → creates HTTP server
+ * ws         → handles WebSocket connections
+ */
 
 import http from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
 
-/* ===================== 🧠 TYPES ===================== */
-
+/* ===================== 🧠 STEP 2: DEFINE TYPES ===================== */
+/**
+ * Stores information about each connected client
+ */
 type ClientInfo = {
         name: string;
 };
 
-/* ===================== 🌐 HTTP SERVER ===================== */
-
+/* ===================== 🌐 STEP 3: CREATE HTTP SERVER ===================== */
 /**
- * Simple HTTP server (health check)
+ * This HTTP server is used mainly as:
+ * - Health check
+ * - Base server for WebSocket
  */
 const server = http.createServer((req, res) => {
         console.log(`🌍 [HTTP] ${req.method} ${req.url}`);
@@ -42,19 +51,25 @@ const server = http.createServer((req, res) => {
         res.end('✅ WebSocket Chat Server is running\n');
 });
 
-/* ===================== 🔌 WEBSOCKET SERVER ===================== */
-
+/* ===================== 🔌 STEP 4: CREATE WEBSOCKET SERVER ===================== */
+/**
+ * WebSocket server is attached to the HTTP server
+ */
 const wss = new WebSocketServer({ server });
 
+/* ===================== 🧠 STEP 5: STORE CONNECTED CLIENTS ===================== */
 /**
- * Store connected clients with their user info
+ * Map:
+ * Key   → WebSocket connection
+ * Value → ClientInfo (username)
  */
 const clients = new Map<WebSocket, ClientInfo>();
 
-/* ===================== 🔁 HELPER FUNCTIONS ===================== */
+/* ===================== 🔁 STEP 6: HELPER FUNCTIONS ===================== */
 
 /**
- * Broadcast a message to all connected clients
+ * STEP 6.1
+ * Broadcast any data to ALL connected clients
  */
 function broadcast(data: unknown) {
         const payload = JSON.stringify(data);
@@ -67,7 +82,8 @@ function broadcast(data: unknown) {
 }
 
 /**
- * Broadcast current online users list
+ * STEP 6.2
+ * Send updated online users list to everyone
  */
 function broadcastUsers() {
         const users = Array.from(clients.values()).map(c => c.name);
@@ -80,35 +96,42 @@ function broadcastUsers() {
         });
 }
 
-/* ===================== 📡 CONNECTION HANDLING ===================== */
+/* ===================== 📡 STEP 7: HANDLE WEBSOCKET CONNECTIONS ===================== */
 
 /**
- * EVENT: New WebSocket connection
+ * STEP 7.1
+ * When a new client connects
  */
 wss.on('connection', (ws: WebSocket, req) => {
         console.log(`🔗 [WS] Client connected from ${req.socket.remoteAddress}`);
 
         /**
-         * EVENT: Message received
+         * STEP 7.2
+         * When a message is received from a client
          */
         ws.on('message', (data) => {
                 try {
+                        // Convert incoming message to JSON
                         const payload = JSON.parse(data.toString());
 
-                        /* ---------- 👤 USER JOIN ---------- */
+                        /* ---------- STEP 7.3: USER JOINS ---------- */
                         if (payload.type === 'join') {
+                                // Save username for this socket
                                 clients.set(ws, { name: payload.name });
 
                                 console.log(`👤 [JOIN] ${payload.name} joined the chat`);
 
+                                // Notify everyone about updated users list
                                 broadcastUsers();
                                 return;
                         }
 
-                        /* ---------- 💬 CHAT MESSAGE ---------- */
+                        /* ---------- STEP 7.4: CHAT MESSAGE ---------- */
                         if (payload.type === 'message') {
+                                // Get sender name
                                 const sender = clients.get(ws)?.name || 'Unknown';
 
+                                // Create message object with timestamp
                                 const chatMessage = {
                                         type: 'message',
                                         name: sender,
@@ -118,6 +141,7 @@ wss.on('connection', (ws: WebSocket, req) => {
 
                                 console.log(`📩 [CHAT] ${sender}: ${payload.message}`);
 
+                                // Broadcast message to all clients
                                 broadcast(chatMessage);
                         }
                 } catch (error) {
@@ -126,27 +150,34 @@ wss.on('connection', (ws: WebSocket, req) => {
         });
 
         /**
-         * EVENT: Client disconnects
+         * STEP 7.5
+         * When client disconnects
          */
         ws.on('close', () => {
                 const user = clients.get(ws)?.name;
+
+                // Remove client from map
                 clients.delete(ws);
 
                 if (user) {
                         console.log(`🔴 [LEAVE] ${user} disconnected`);
+
+                        // Update online users list
                         broadcastUsers();
                 }
         });
 
         /**
-         * EVENT: Error
+         * STEP 7.6
+         * Handle WebSocket errors
          */
         ws.on('error', (err) => {
                 console.error('❌ [WS ERROR]', err);
         });
 
         /**
-         * Welcome message
+         * STEP 7.7
+         * Send welcome message to new client
          */
         ws.send(JSON.stringify({
                 type: 'system',
@@ -154,8 +185,11 @@ wss.on('connection', (ws: WebSocket, req) => {
         }));
 });
 
-/* ===================== ▶️ SERVER START ===================== */
+/* ===================== ▶️ STEP 8: START SERVER ===================== */
 
+/**
+ * Start HTTP + WebSocket server
+ */
 const PORT = 8080;
 
 server.listen(PORT, () => {
